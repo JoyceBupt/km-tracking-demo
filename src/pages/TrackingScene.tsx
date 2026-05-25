@@ -7,88 +7,170 @@ import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { Slider } from '../components/ui/Slider'
 import { TrackingSimulation } from '../simulation/engine'
 import { SCENARIOS, DEFAULT_SCENARIO_ID } from '../simulation/scenarios'
-import { type FrameSnapshot, type SimulationConfig } from '../simulation/types'
+import {
+  type FrameSnapshot,
+  type GroundTruthTarget,
+  type SimulationConfig,
+} from '../simulation/types'
 
-const FIRST_SCENARIO = SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO_ID) ?? SCENARIOS[0]
+const FIRST_SCENARIO =
+  SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO_ID) ?? SCENARIOS[0]
+
+function cloneTargets(targets?: GroundTruthTarget[]): GroundTruthTarget[] | undefined {
+  return targets?.map((t) => ({
+    ...t,
+    bbox: { ...t.bbox },
+    velocity: { ...t.velocity },
+  }))
+}
+
+function buildSim(
+  config: SimulationConfig,
+  algorithm: 'km' | 'greedy',
+  initialTargets?: GroundTruthTarget[],
+): TrackingSimulation {
+  return new TrackingSimulation({ ...config, algorithm }, cloneTargets(initialTargets))
+}
 
 export function TrackingScene() {
   const [scenarioId, setScenarioId] = useState<string>(FIRST_SCENARIO.id)
   const [config, setConfig] = useState<SimulationConfig>(FIRST_SCENARIO.config)
-  const simRef = useRef<TrackingSimulation>(
-    new TrackingSimulation(FIRST_SCENARIO.config, FIRST_SCENARIO.buildTargets?.()),
+  const [compareMode, setCompareMode] = useState(false)
+
+  const simARef = useRef<TrackingSimulation>(
+    buildSim(FIRST_SCENARIO.config, 'km', FIRST_SCENARIO.buildTargets?.()),
   )
-  const [snapshot, setSnapshot] = useState<FrameSnapshot | null>(null)
+  const simBRef = useRef<TrackingSimulation | null>(null)
+
+  const [snapshotA, setSnapshotA] = useState<FrameSnapshot | null>(null)
+  const [snapshotB, setSnapshotB] = useState<FrameSnapshot | null>(null)
   const [playing, setPlaying] = useState(false)
   const [fps, setFps] = useState(12)
   const [showTruth, setShowTruth] = useState(false)
   const [showFalsePositives, setShowFalsePositives] = useState(true)
 
+  const currentScenario = useMemo(
+    () => SCENARIOS.find((s) => s.id === scenarioId) ?? FIRST_SCENARIO,
+    [scenarioId],
+  )
+
   useEffect(() => {
-    simRef.current.updateConfig(config)
+    simARef.current.updateConfig({ ...config, algorithm: 'km' })
+    if (simBRef.current) {
+      simBRef.current.updateConfig({ ...config, algorithm: 'greedy' })
+    }
   }, [config])
+
+  const rebuildSims = useCallback(
+    (cfg: SimulationConfig, initial?: GroundTruthTarget[], compare = compareMode) => {
+      simARef.current = buildSim(cfg, 'km', initial)
+      simBRef.current = compare ? buildSim(cfg, 'greedy', initial) : null
+      setSnapshotA(null)
+      setSnapshotB(null)
+    },
+    [compareMode],
+  )
 
   useEffect(() => {
     if (!playing) return
+    const interval = Math.max(20, Math.round(1000 / fps))
     const id = window.setInterval(() => {
-      const snap = simRef.current.step()
-      setSnapshot(snap)
-    }, Math.max(20, Math.round(1000 / fps)))
+      const a = simARef.current.step()
+      setSnapshotA(a)
+      if (simBRef.current) {
+        const b = simBRef.current.step()
+        setSnapshotB(b)
+      }
+    }, interval)
     return () => window.clearInterval(id)
   }, [playing, fps])
 
   const stepOnce = useCallback(() => {
-    const snap = simRef.current.step()
-    setSnapshot(snap)
+    const a = simARef.current.step()
+    setSnapshotA(a)
+    if (simBRef.current) {
+      const b = simBRef.current.step()
+      setSnapshotB(b)
+    }
   }, [])
 
   const reset = useCallback(() => {
     setPlaying(false)
-    const scenario = SCENARIOS.find((s) => s.id === scenarioId) ?? FIRST_SCENARIO
-    simRef.current.reset(config, scenario.buildTargets?.())
-    setSnapshot(null)
-  }, [config, scenarioId])
+    rebuildSims(config, currentScenario.buildTargets?.())
+  }, [config, currentScenario, rebuildSims])
 
-  const applyScenario = useCallback((id: string) => {
-    const scenario = SCENARIOS.find((s) => s.id === id) ?? FIRST_SCENARIO
-    setScenarioId(id)
-    setConfig(scenario.config)
-    setPlaying(false)
-    simRef.current.reset(scenario.config, scenario.buildTargets?.())
-    setSnapshot(null)
-  }, [])
+  const applyScenario = useCallback(
+    (id: string) => {
+      const scenario = SCENARIOS.find((s) => s.id === id) ?? FIRST_SCENARIO
+      setScenarioId(id)
+      setConfig(scenario.config)
+      setPlaying(false)
+      rebuildSims(scenario.config, scenario.buildTargets?.())
+    },
+    [rebuildSims],
+  )
 
-  const patch = useCallback(<K extends keyof SimulationConfig>(key: K, value: SimulationConfig[K]) => {
-    setConfig((prev) => ({ ...prev, [key]: value }))
-  }, [])
+  const toggleCompare = useCallback(
+    (next: boolean) => {
+      setCompareMode(next)
+      setPlaying(false)
+      const initial = currentScenario.buildTargets?.()
+      simARef.current = buildSim(config, 'km', initial)
+      simBRef.current = next ? buildSim(config, 'greedy', initial) : null
+      setSnapshotA(null)
+      setSnapshotB(null)
+    },
+    [config, currentScenario],
+  )
+
+  const patch = useCallback(
+    <K extends keyof SimulationConfig>(key: K, value: SimulationConfig[K]) => {
+      setConfig((prev) => ({ ...prev, [key]: value }))
+    },
+    [],
+  )
 
   const bipartiteAssignment = useMemo(() => {
-    if (!snapshot) return undefined
-    const n = snapshot.preMatchTrackIds.length
+    if (!snapshotA) return undefined
+    const n = snapshotA.preMatchTrackIds.length
     const ass: number[] = Array.from({ length: n }, () => -1)
-    for (const { trackIdx, detectionIdx } of snapshot.matches) {
+    for (const { trackIdx, detectionIdx } of snapshotA.matches) {
       if (trackIdx < n) ass[trackIdx] = detectionIdx
     }
     return ass
-  }, [snapshot])
+  }, [snapshotA])
 
   const bipartiteLeftLabels = useMemo(
-    () => snapshot?.preMatchTrackIds.map((id) => `#${id}`) ?? [],
-    [snapshot],
+    () => snapshotA?.preMatchTrackIds.map((id) => `#${id}`) ?? [],
+    [snapshotA],
   )
 
   const bipartiteRightLabels = useMemo(
-    () => snapshot?.preMatchDetectionIds.map((id) => `d${id}`) ?? [],
-    [snapshot],
+    () => snapshotA?.preMatchDetectionIds.map((id) => `d${id}`) ?? [],
+    [snapshotA],
   )
 
   return (
     <div className="grid lg:grid-cols-12 gap-6 p-6 max-w-[1400px] mx-auto">
       <div className="lg:col-span-8 space-y-6">
         <Card
-          title="场景"
-          subtitle="彩色框 = 轨迹 · 灰色框 = 检测 · 红色框 = 误检"
+          title={compareMode ? '场景 · KM vs 贪心' : '场景'}
+          subtitle={
+            compareMode
+              ? '同 seed、同参数下两种算法并排运行'
+              : '彩色框 = 轨迹 · 灰色框 = 检测 · 红色框 = 误检'
+          }
           actions={
             <div className="flex items-center gap-2">
+              <label className="inline-flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer mr-2">
+                <input
+                  type="checkbox"
+                  checked={compareMode}
+                  onChange={(e) => toggleCompare(e.target.checked)}
+                  className="accent-brand-600"
+                />
+                对比模式
+              </label>
               <Button
                 variant={playing ? 'danger' : 'primary'}
                 onClick={() => setPlaying((p) => !p)}
@@ -104,62 +186,85 @@ export function TrackingScene() {
             </div>
           }
         >
-          <div className="flex justify-center">
-            <TrackingCanvas
-              snapshot={snapshot}
-              config={config}
-              showTruth={showTruth}
-              showFalsePositives={showFalsePositives}
-            />
-          </div>
-          <div className="grid sm:grid-cols-4 gap-3 mt-4 text-sm">
-            <Metric label="帧" value={snapshot?.frame ?? 0} />
-            <Metric
-              label="活跃轨迹"
-              value={snapshot?.metrics.activeTracks ?? 0}
-            />
-            <Metric
-              label="真值数"
-              value={snapshot?.metrics.activeTruth ?? 0}
-            />
-            <Metric
-              label="ID 切换累计"
-              value={snapshot?.metrics.idSwitches ?? 0}
-              tone={
-                (snapshot?.metrics.idSwitches ?? 0) > 0 ? 'warn' : 'normal'
-              }
-            />
-          </div>
-        </Card>
-
-        <Card title="当前帧关联" subtitle="左 = 轨迹 · 右 = 检测 · 紫色 = 匹配">
-          {snapshot && snapshot.costMatrix.length > 0 ? (
-            <div className="flex justify-center overflow-auto">
-              <BipartiteGraph
-                costs={snapshot.costMatrix}
-                assignment={bipartiteAssignment}
-                leftLabels={bipartiteLeftLabels}
-                rightLabels={bipartiteRightLabels}
-                leftTitle="轨迹"
-                rightTitle="检测"
-                maximize={config.metric === 'iou'}
-                width={620}
-                height={Math.max(
-                  280,
-                  60 *
-                    Math.max(
-                      snapshot.preMatchTrackIds.length,
-                      snapshot.preMatchDetectionIds.length,
-                    ),
-                )}
+          {compareMode ? (
+            <div className="grid grid-cols-2 gap-3">
+              <ComparePane
+                title="KM"
+                snapshot={snapshotA}
+                config={config}
+                showTruth={showTruth}
+                showFalsePositives={showFalsePositives}
+                tone="primary"
+              />
+              <ComparePane
+                title="贪心"
+                snapshot={snapshotB}
+                config={config}
+                showTruth={showTruth}
+                showFalsePositives={showFalsePositives}
+                tone="muted"
               />
             </div>
           ) : (
-            <p className="text-sm text-slate-400 text-center py-8">
-              当前帧没有可关联的对象。
-            </p>
+            <>
+              <div className="flex justify-center">
+                <TrackingCanvas
+                  snapshot={snapshotA}
+                  config={config}
+                  showTruth={showTruth}
+                  showFalsePositives={showFalsePositives}
+                />
+              </div>
+              <div className="grid sm:grid-cols-4 gap-3 mt-4 text-sm">
+                <Metric label="帧" value={snapshotA?.frame ?? 0} />
+                <Metric
+                  label="活跃轨迹"
+                  value={snapshotA?.metrics.activeTracks ?? 0}
+                />
+                <Metric
+                  label="真值数"
+                  value={snapshotA?.metrics.activeTruth ?? 0}
+                />
+                <Metric
+                  label="ID 切换累计"
+                  value={snapshotA?.metrics.idSwitches ?? 0}
+                  tone={(snapshotA?.metrics.idSwitches ?? 0) > 0 ? 'warn' : 'normal'}
+                />
+              </div>
+            </>
           )}
         </Card>
+
+        {!compareMode && (
+          <Card title="当前帧关联" subtitle="左 = 轨迹 · 右 = 检测 · 紫色 = 匹配">
+            {snapshotA && snapshotA.costMatrix.length > 0 ? (
+              <div className="flex justify-center overflow-auto">
+                <BipartiteGraph
+                  costs={snapshotA.costMatrix}
+                  assignment={bipartiteAssignment}
+                  leftLabels={bipartiteLeftLabels}
+                  rightLabels={bipartiteRightLabels}
+                  leftTitle="轨迹"
+                  rightTitle="检测"
+                  maximize={config.metric === 'iou'}
+                  width={620}
+                  height={Math.max(
+                    280,
+                    60 *
+                      Math.max(
+                        snapshotA.preMatchTrackIds.length,
+                        snapshotA.preMatchDetectionIds.length,
+                      ),
+                  )}
+                />
+              </div>
+            ) : (
+              <p className="text-sm text-slate-400 text-center py-8">
+                当前帧没有可关联的对象。
+              </p>
+            )}
+          </Card>
+        )}
       </div>
 
       <div className="lg:col-span-4 space-y-6">
@@ -188,7 +293,14 @@ export function TrackingScene() {
         <Card title="关联策略">
           <div className="space-y-3">
             <div>
-              <div className="text-xs font-medium text-slate-600 mb-1.5">算法</div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-slate-600">算法</span>
+                {compareMode && (
+                  <span className="text-[11px] text-slate-400">
+                    对比模式下两侧固定为 KM / 贪心
+                  </span>
+                )}
+              </div>
               <SegmentedControl
                 value={config.algorithm}
                 onChange={(v) => patch('algorithm', v)}
@@ -196,6 +308,7 @@ export function TrackingScene() {
                   { value: 'km', label: 'KM' },
                   { value: 'greedy', label: '贪心' },
                 ]}
+                className={compareMode ? 'opacity-40 pointer-events-none' : ''}
               />
             </div>
             <div>
@@ -344,6 +457,79 @@ export function TrackingScene() {
             </div>
           </div>
         </Card>
+      </div>
+    </div>
+  )
+}
+
+function ComparePane({
+  title,
+  snapshot,
+  config,
+  showTruth,
+  showFalsePositives,
+  tone,
+}: {
+  title: string
+  snapshot: FrameSnapshot | null
+  config: SimulationConfig
+  showTruth: boolean
+  showFalsePositives: boolean
+  tone: 'primary' | 'muted'
+}) {
+  const idSwitches = snapshot?.metrics.idSwitches ?? 0
+  const titleClass =
+    tone === 'primary'
+      ? 'text-brand-700'
+      : 'text-slate-700'
+  return (
+    <div className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <span className={`text-sm font-semibold ${titleClass}`}>{title}</span>
+        <span className="text-xs text-slate-500 tabular-nums">
+          frame {snapshot?.frame ?? 0}
+        </span>
+      </div>
+      <div className="flex justify-center">
+        <TrackingCanvas
+          snapshot={snapshot}
+          config={config}
+          showTruth={showTruth}
+          showFalsePositives={showFalsePositives}
+          displayScale={0.62}
+        />
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <Pill label="轨迹" value={snapshot?.metrics.activeTracks ?? 0} />
+        <Pill label="真值" value={snapshot?.metrics.activeTruth ?? 0} />
+        <Pill
+          label="ID 切换"
+          value={idSwitches}
+          tone={idSwitches > 0 ? 'warn' : 'normal'}
+        />
+      </div>
+    </div>
+  )
+}
+
+function Pill({
+  label,
+  value,
+  tone = 'normal',
+}: {
+  label: string
+  value: number
+  tone?: 'normal' | 'warn'
+}) {
+  return (
+    <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1">
+      <div className="text-[10px] text-slate-500 uppercase">{label}</div>
+      <div
+        className={`text-base font-semibold tabular-nums ${
+          tone === 'warn' ? 'text-rose-600' : 'text-slate-800'
+        }`}
+      >
+        {value}
       </div>
     </div>
   )

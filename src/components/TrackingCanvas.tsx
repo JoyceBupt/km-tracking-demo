@@ -6,6 +6,7 @@ interface TrackingCanvasProps {
   config: SimulationConfig
   showTruth: boolean
   showFalsePositives: boolean
+  displayScale?: number
   className?: string
 }
 
@@ -14,6 +15,7 @@ export function TrackingCanvas({
   config,
   showTruth,
   showFalsePositives,
+  displayScale = 1,
   className,
 }: TrackingCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -24,13 +26,13 @@ export function TrackingCanvas({
     const dpr = window.devicePixelRatio || 1
     canvas.width = config.width * dpr
     canvas.height = config.height * dpr
-    canvas.style.width = `${config.width}px`
-    canvas.style.height = `${config.height}px`
+    canvas.style.width = `${config.width * displayScale}px`
+    canvas.style.height = `${config.height * displayScale}px`
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     draw(ctx, snapshot, config, showTruth, showFalsePositives)
-  }, [snapshot, config, showTruth, showFalsePositives])
+  }, [snapshot, config, showTruth, showFalsePositives, displayScale])
 
   return (
     <canvas
