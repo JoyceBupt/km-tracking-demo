@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { greedy, hungarian, km } from '../algorithms'
 import type { CostMatrix } from '../algorithms/types'
 import { BipartiteGraph } from '../components/BipartiteGraph'
+import { KMReplay } from '../components/KMReplay'
 import { MatrixEditor } from '../components/MatrixEditor'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
@@ -116,6 +117,7 @@ const ALGORITHM_DESC: Record<'km' | 'hungarian' | 'greedy', string> = {
 export function MatchingPlayground() {
   const [matrix, setMatrix] = useState<CostMatrix>(cloneMatrix(PRESETS[0].matrix))
   const [maximize, setMaximize] = useState(true)
+  const [replayOpen, setReplayOpen] = useState(false)
 
   const rows = matrix.length
   const cols = rows > 0 ? matrix[0].length : 0
@@ -279,7 +281,14 @@ export function MatchingPlayground() {
       </div>
 
       <div className="lg:col-span-7 space-y-6">
-        <Card title="KM 最优匹配">
+        <Card
+          title="KM 最优匹配"
+          actions={
+            <Button size="sm" variant="primary" onClick={() => setReplayOpen(true)}>
+              查看分步执行
+            </Button>
+          }
+        >
           <div className="flex justify-center">
             <BipartiteGraph
               costs={matrix}
@@ -313,6 +322,13 @@ export function MatchingPlayground() {
           </ul>
         </Card>
       </div>
+      {replayOpen && (
+        <KMReplay
+          costs={matrix}
+          maximize={maximize}
+          onClose={() => setReplayOpen(false)}
+        />
+      )}
     </div>
   )
 }
