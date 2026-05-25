@@ -6,11 +6,17 @@ import { Card } from '../components/ui/Card'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { Slider } from '../components/ui/Slider'
 import { TrackingSimulation } from '../simulation/engine'
-import { DEFAULT_CONFIG, type FrameSnapshot, type SimulationConfig } from '../simulation/types'
+import { SCENARIOS, DEFAULT_SCENARIO_ID } from '../simulation/scenarios'
+import { type FrameSnapshot, type SimulationConfig } from '../simulation/types'
+
+const FIRST_SCENARIO = SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO_ID) ?? SCENARIOS[0]
 
 export function TrackingScene() {
-  const [config, setConfig] = useState<SimulationConfig>(DEFAULT_CONFIG)
-  const simRef = useRef<TrackingSimulation>(new TrackingSimulation(config))
+  const [scenarioId, setScenarioId] = useState<string>(FIRST_SCENARIO.id)
+  const [config, setConfig] = useState<SimulationConfig>(FIRST_SCENARIO.config)
+  const simRef = useRef<TrackingSimulation>(
+    new TrackingSimulation(FIRST_SCENARIO.config, FIRST_SCENARIO.buildTargets?.()),
+  )
   const [snapshot, setSnapshot] = useState<FrameSnapshot | null>(null)
   const [playing, setPlaying] = useState(false)
   const [fps, setFps] = useState(12)
@@ -37,9 +43,19 @@ export function TrackingScene() {
 
   const reset = useCallback(() => {
     setPlaying(false)
-    simRef.current.reset(config)
+    const scenario = SCENARIOS.find((s) => s.id === scenarioId) ?? FIRST_SCENARIO
+    simRef.current.reset(config, scenario.buildTargets?.())
     setSnapshot(null)
-  }, [config])
+  }, [config, scenarioId])
+
+  const applyScenario = useCallback((id: string) => {
+    const scenario = SCENARIOS.find((s) => s.id === id) ?? FIRST_SCENARIO
+    setScenarioId(id)
+    setConfig(scenario.config)
+    setPlaying(false)
+    simRef.current.reset(scenario.config, scenario.buildTargets?.())
+    setSnapshot(null)
+  }, [])
 
   const patch = useCallback(<K extends keyof SimulationConfig>(key: K, value: SimulationConfig[K]) => {
     setConfig((prev) => ({ ...prev, [key]: value }))
@@ -147,6 +163,28 @@ export function TrackingScene() {
       </div>
 
       <div className="lg:col-span-4 space-y-6">
+        <Card title="场景预设" subtitle="一键加载典型情形">
+          <div className="grid grid-cols-2 gap-2">
+            {SCENARIOS.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => applyScenario(s.id)}
+                className={`text-left px-3 py-2 rounded-md border transition-colors ${
+                  scenarioId === s.id
+                    ? 'border-brand-500 bg-brand-50 text-brand-700'
+                    : 'border-slate-200 hover:border-slate-300 bg-white text-slate-700'
+                }`}
+              >
+                <div className="text-sm font-medium">{s.name}</div>
+                <div className="text-xs text-slate-500 mt-0.5 leading-snug">
+                  {s.description}
+                </div>
+              </button>
+            ))}
+          </div>
+        </Card>
+
         <Card title="关联策略">
           <div className="space-y-3">
             <div>

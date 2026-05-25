@@ -27,13 +27,17 @@ export class TrackingSimulation {
   private idSwitches = 0
   private lastFrame: FrameSnapshot | null = null
 
-  constructor(config: SimulationConfig) {
+  constructor(config: SimulationConfig, initialTargets?: GroundTruthTarget[]) {
     this.config = config
     this.rng = createRng(config.seed)
-    this.bootstrap()
+    if (initialTargets && initialTargets.length > 0) {
+      this.installTargets(initialTargets)
+    } else {
+      this.bootstrap()
+    }
   }
 
-  reset(config?: SimulationConfig): void {
+  reset(config?: SimulationConfig, initialTargets?: GroundTruthTarget[]): void {
     if (config) this.config = config
     this.frame = 0
     this.rng = createRng(this.config.seed)
@@ -43,13 +47,26 @@ export class TrackingSimulation {
     this.nextTrackId = 0
     this.idSwitches = 0
     this.lastFrame = null
-    this.bootstrap()
+    if (initialTargets && initialTargets.length > 0) {
+      this.installTargets(initialTargets)
+    } else {
+      this.bootstrap()
+    }
   }
 
   updateConfig(patch: Partial<SimulationConfig>): void {
     const reseed = patch.seed !== undefined && patch.seed !== this.config.seed
     this.config = { ...this.config, ...patch }
     if (reseed) this.reset()
+  }
+
+  private installTargets(initial: GroundTruthTarget[]): void {
+    this.targets = initial.map((t) => ({
+      ...t,
+      bbox: { ...t.bbox },
+      velocity: { ...t.velocity },
+    }))
+    this.nextTruthId = this.targets.reduce((acc, t) => Math.max(acc, t.truthId + 1), 0)
   }
 
   get snapshot(): FrameSnapshot | null {
