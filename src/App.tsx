@@ -4,17 +4,9 @@ import { TrackingScene } from './pages/TrackingScene'
 
 type TabKey = 'playground' | 'tracking'
 
-const TABS: { key: TabKey; label: string; description: string }[] = [
-  {
-    key: 'playground',
-    label: '算法演示',
-    description: '矩阵编辑 · KM / 匈牙利 / 贪心三算法对比',
-  },
-  {
-    key: 'tracking',
-    label: '跟踪模拟',
-    description: '多目标跟踪场景 · 实时数据关联',
-  },
+const TABS: { key: TabKey; label: string }[] = [
+  { key: 'playground', label: '匹配' },
+  { key: 'tracking', label: '跟踪' },
 ]
 
 function App() {
@@ -30,22 +22,14 @@ function App() {
             </div>
             <div>
               <h1 className="text-lg font-semibold text-slate-900 leading-tight">
-                KM 算法与多目标跟踪数据关联
+                Kuhn–Munkres 与多目标跟踪
               </h1>
               <p className="text-xs text-slate-500">
-                带权二部图最大权匹配的交互演示
+                带权二部图最大权匹配
               </p>
             </div>
-            <a
-              href="https://github.com"
-              className="ml-auto text-xs text-slate-400 hover:text-slate-600"
-              target="_blank"
-              rel="noreferrer"
-            >
-              图论及其应用 · 课程作业
-            </a>
           </div>
-          <nav className="flex gap-1" aria-label="页面切换">
+          <nav className="flex gap-1" aria-label="切换视图">
             {TABS.map((t) => {
               const active = t.key === tab
               return (
@@ -72,9 +56,6 @@ function App() {
       <main>
         {tab === 'playground' ? <MatchingPlayground /> : <TrackingScene />}
       </main>
-      <footer className="text-center text-xs text-slate-400 py-6">
-        Vite 8 · React 19 · TypeScript · Tailwind v4
-      </footer>
     </div>
   )
 }

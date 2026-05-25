@@ -48,7 +48,7 @@ export function TrackingScene() {
   const bipartiteAssignment = useMemo(() => {
     if (!snapshot) return undefined
     const n = snapshot.preMatchTrackIds.length
-    const ass = new Array<number>(n).fill(-1)
+    const ass: number[] = Array.from({ length: n }, () => -1)
     for (const { trackIdx, detectionIdx } of snapshot.matches) {
       if (trackIdx < n) ass[trackIdx] = detectionIdx
     }
@@ -69,8 +69,8 @@ export function TrackingScene() {
     <div className="grid lg:grid-cols-12 gap-6 p-6 max-w-[1400px] mx-auto">
       <div className="lg:col-span-8 space-y-6">
         <Card
-          title="跟踪场景"
-          subtitle="彩色框 = 跟踪轨迹，灰色框 = 模拟检测，红色框 = 误检"
+          title="场景"
+          subtitle="彩色框 = 轨迹 · 灰色框 = 检测 · 红色框 = 误检"
           actions={
             <div className="flex items-center gap-2">
               <Button
@@ -116,7 +116,7 @@ export function TrackingScene() {
           </div>
         </Card>
 
-        <Card title="当前帧关联（二部图）" subtitle="左部为已有轨迹，右部为本帧检测，紫色边为算法输出的匹配">
+        <Card title="当前帧关联" subtitle="左 = 轨迹 · 右 = 检测 · 紫色 = 匹配">
           {snapshot && snapshot.costMatrix.length > 0 ? (
             <div className="flex justify-center overflow-auto">
               <BipartiteGraph

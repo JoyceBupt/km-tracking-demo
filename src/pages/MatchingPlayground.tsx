@@ -17,9 +17,9 @@ interface Preset {
 
 const PRESETS: Preset[] = [
   {
-    id: 'textbook',
-    name: '课本 3×3',
-    description: '经典最大权完美匹配示例',
+    id: 'classic-3x3',
+    name: '3×3 基础',
+    description: '最简单的方阵',
     matrix: [
       [3, 5, 5],
       [4, 6, 2],
@@ -28,9 +28,9 @@ const PRESETS: Preset[] = [
     maximize: true,
   },
   {
-    id: 'greedy-counter',
-    name: '贪心反例 2×2',
-    description: '贪心算法严格次于 KM',
+    id: 'greedy-trap',
+    name: '贪心陷阱',
+    description: '贪心选大值反而吃亏',
     matrix: [
       [10, 9],
       [9, 1],
@@ -40,7 +40,7 @@ const PRESETS: Preset[] = [
   {
     id: 'tracking-iou',
     name: '跟踪 IoU 5×5',
-    description: '模拟一帧轨迹-检测的 IoU × 100',
+    description: '一帧轨迹-检测的 IoU',
     matrix: [
       [80, 12, 3, 0, 5],
       [15, 78, 8, 2, 1],
@@ -52,8 +52,8 @@ const PRESETS: Preset[] = [
   },
   {
     id: 'cost-min',
-    name: '成本最小化 4×4',
-    description: '取最小成本匹配（如调度耗时）',
+    name: '4×4 最小化',
+    description: '取最小总成本',
     matrix: [
       [9, 2, 7, 8],
       [6, 4, 3, 7],
@@ -63,9 +63,9 @@ const PRESETS: Preset[] = [
     maximize: false,
   },
   {
-    id: 'non-square',
-    name: '非方阵 3×5',
-    description: '检测多于轨迹（含新生目标）',
+    id: 'rect-3x5',
+    name: '3×5 非方阵',
+    description: '检测多于轨迹',
     matrix: [
       [82, 4, 7, 1, 0],
       [3, 76, 9, 8, 2],
@@ -102,15 +102,15 @@ function cloneMatrix(m: CostMatrix): CostMatrix {
 }
 
 const ALGORITHM_LABEL: Record<'km' | 'hungarian' | 'greedy', string> = {
-  km: 'KM (Kuhn-Munkres)',
-  hungarian: '匈牙利 (无权)',
+  km: 'Kuhn–Munkres',
+  hungarian: '匈牙利',
   greedy: '贪心',
 }
 
 const ALGORITHM_DESC: Record<'km' | 'hungarian' | 'greedy', string> = {
-  km: '带权二部图最大权完美匹配，O(n³)',
-  hungarian: '把成本 > 0 视为有边，求最大匹配数',
-  greedy: '按权重排序枚举边，作为基线对照',
+  km: '带权完美匹配 · O(n³)',
+  hungarian: '无权最大匹配',
+  greedy: '按权排序取边',
 }
 
 export function MatchingPlayground() {
@@ -148,7 +148,7 @@ export function MatchingPlayground() {
       <div className="lg:col-span-5 space-y-6">
         <Card
           title="成本矩阵"
-          subtitle={`${rows} × ${cols}，${maximize ? '最大化权重' : '最小化成本'}`}
+          subtitle={`${rows} × ${cols} · ${maximize ? 'max' : 'min'}`}
           actions={
             <label className="inline-flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer">
               <input
@@ -219,7 +219,7 @@ export function MatchingPlayground() {
 
         <Card
           title="算法对比"
-          subtitle="同一矩阵下三种方法的结果与最优解差距"
+          subtitle="三种算法在同一矩阵上的结果"
         >
           <table className="w-full text-sm">
             <thead>
@@ -279,16 +279,13 @@ export function MatchingPlayground() {
       </div>
 
       <div className="lg:col-span-7 space-y-6">
-        <Card
-          title="KM 最优匹配可视化"
-          subtitle="灰色边为候选，紫色边为匹配，边上数字为权重"
-        >
+        <Card title="KM 最优匹配">
           <div className="flex justify-center">
             <BipartiteGraph
               costs={matrix}
               assignment={results.km.assignment}
-              leftTitle="左部 (轨迹 / 任务)"
-              rightTitle="右部 (检测 / 资源)"
+              leftTitle="左部"
+              rightTitle="右部"
               maximize={maximize}
               width={560}
               height={Math.max(320, 60 * Math.max(rows, cols))}
