@@ -35,13 +35,13 @@ export const SCENARIOS: Scenario[] = [
   {
     id: 'crossing',
     name: '对穿交叉',
-    description: '4 个目标两两相向运动，在画面中央交叉',
+    description: '6 个目标两两相向，多次正面交叉',
     config: {
       ...DEFAULT_CONFIG,
-      targetCount: 4,
-      positionNoise: 3,
-      missProbability: 0,
-      falsePositiveRate: 0,
+      targetCount: 6,
+      positionNoise: 8,
+      missProbability: 0.08,
+      falsePositiveRate: 0.2,
       birthProbability: 0,
       deathProbability: 0,
       iouThreshold: 0.15,
@@ -50,13 +50,15 @@ export const SCENARIOS: Scenario[] = [
     buildTargets: () => {
       const w = DEFAULT_CONFIG.width
       const h = DEFAULT_CONFIG.height
-      const size = 44
+      const size = 42
       const cy = h / 2
       return [
-        makeTarget(0, 70, cy - 70, size, 1.8, 0),
-        makeTarget(1, w - 70, cy - 70, size, -1.8, 0),
-        makeTarget(2, 70, cy + 70, size, 1.6, 0.2),
-        makeTarget(3, w - 70, cy + 70, size, -1.6, -0.2),
+        makeTarget(0, 60, cy - 110, size, 2.0, 0.15),
+        makeTarget(1, w - 60, cy - 110, size, -2.0, -0.15),
+        makeTarget(2, 60, cy, size, 1.8, 0),
+        makeTarget(3, w - 60, cy, size, -1.8, 0),
+        makeTarget(4, 60, cy + 110, size, 1.7, -0.18),
+        makeTarget(5, w - 60, cy + 110, size, -1.7, 0.18),
       ]
     },
   },
