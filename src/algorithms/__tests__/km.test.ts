@@ -10,7 +10,7 @@ function isPermutation(assignment: number[], n: number, expectedCount = n): bool
 
 function bruteforceBestSquare(costs: CostMatrix, maximize = true): number {
   const n = costs.length
-  const used = new Array(n).fill(false)
+  const used = Array.from({ length: n }, () => false)
   let best = maximize ? -Infinity : Infinity
   function dfs(i: number, acc: number) {
     if (i === n) {

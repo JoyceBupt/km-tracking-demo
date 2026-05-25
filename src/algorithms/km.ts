@@ -5,7 +5,7 @@ const INF = Number.POSITIVE_INFINITY
 function emptyResult(rows: number): MatchingResult {
   return {
     algorithm: 'km',
-    assignment: new Array(rows).fill(-1),
+    assignment: Array.from({ length: rows }, () => -1),
     totalWeight: 0,
     matchCount: 0,
   }
@@ -33,16 +33,16 @@ export function km(costs: CostMatrix, options: MatchingOptions = {}): MatchingRe
   const n = a.length
   const m = a[0].length
 
-  const u = new Array(n + 1).fill(0)
-  const v = new Array(m + 1).fill(0)
-  const p = new Array(m + 1).fill(0)
-  const way = new Array(m + 1).fill(0)
+  const u = Array.from({ length: n + 1 }, () => 0)
+  const v = Array.from({ length: m + 1 }, () => 0)
+  const p = Array.from({ length: m + 1 }, () => 0)
+  const way = Array.from({ length: m + 1 }, () => 0)
 
   for (let i = 1; i <= n; i++) {
     p[0] = i
     let j0 = 0
-    const minv = new Array(m + 1).fill(INF)
-    const used = new Array(m + 1).fill(false)
+    const minv = Array.from({ length: m + 1 }, () => INF)
+    const used = Array.from({ length: m + 1 }, () => false)
 
     do {
       used[j0] = true
@@ -80,12 +80,12 @@ export function km(costs: CostMatrix, options: MatchingOptions = {}): MatchingRe
     } while (j0 !== 0)
   }
 
-  const innerAssignment = new Array(n).fill(-1)
+  const innerAssignment = Array.from({ length: n }, () => -1)
   for (let j = 1; j <= m; j++) {
     if (p[j] > 0) innerAssignment[p[j] - 1] = j - 1
   }
 
-  const assignment = new Array(rows).fill(-1)
+  const assignment = Array.from({ length: rows }, () => -1)
   if (transposed) {
     for (let i = 0; i < n; i++) {
       const j = innerAssignment[i]

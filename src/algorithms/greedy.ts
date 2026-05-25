@@ -7,7 +7,7 @@ export function greedy(costs: CostMatrix, options: MatchingOptions = {}): Matchi
   if (rows === 0 || cols === 0) {
     return {
       algorithm: 'greedy',
-      assignment: new Array(rows).fill(-1),
+      assignment: Array.from({ length: rows }, () => -1),
       totalWeight: 0,
       matchCount: 0,
     }
@@ -21,8 +21,8 @@ export function greedy(costs: CostMatrix, options: MatchingOptions = {}): Matchi
   }
   edges.sort((a, b) => (maximize ? b.w - a.w : a.w - b.w))
 
-  const assignment = new Array(rows).fill(-1)
-  const usedY = new Array(cols).fill(false)
+  const assignment = Array.from({ length: rows }, () => -1)
+  const usedY = Array.from({ length: cols }, () => false)
   let totalWeight = 0
   let matchCount = 0
 

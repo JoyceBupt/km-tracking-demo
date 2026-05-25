@@ -8,13 +8,13 @@ export function hungarian(adj: AdjacencyMatrix): MatchingResult {
   if (rows === 0 || cols === 0) {
     return {
       algorithm: 'hungarian',
-      assignment: new Array(rows).fill(-1),
+      assignment: Array.from({ length: rows }, () => -1),
       totalWeight: 0,
       matchCount: 0,
     }
   }
 
-  const matchY: number[] = new Array(cols).fill(-1)
+  const matchY: number[] = Array.from({ length: cols }, () => -1)
 
   function tryAugment(i: number, visited: boolean[]): boolean {
     for (let j = 0; j < cols; j++) {
@@ -30,11 +30,11 @@ export function hungarian(adj: AdjacencyMatrix): MatchingResult {
   }
 
   for (let i = 0; i < rows; i++) {
-    const visited = new Array(cols).fill(false)
+    const visited = Array.from({ length: cols }, () => false)
     tryAugment(i, visited)
   }
 
-  const assignment = new Array(rows).fill(-1)
+  const assignment = Array.from({ length: rows }, () => -1)
   let totalWeight = 0
   let matchCount = 0
   for (let j = 0; j < cols; j++) {
