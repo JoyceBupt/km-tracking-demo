@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { greedy, hungarian, km } from '../algorithms'
 import type { CostMatrix } from '../algorithms/types'
 import { BipartiteGraph } from '../components/BipartiteGraph'
@@ -7,6 +7,18 @@ import { MatrixEditor } from '../components/MatrixEditor'
 import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { NumberStepper } from '../components/ui/NumberStepper'
+import { decodeState, encodeState, readHashParams, writeHashParams } from '../lib/urlState'
+
+interface PlaygroundState {
+  matrix: CostMatrix
+  maximize: boolean
+}
+
+function readInitialState(fallback: PlaygroundState): PlaygroundState {
+  const decoded = decodeState<PlaygroundState>(readHashParams().get('pg'))
+  if (!decoded || !Array.isArray(decoded.matrix)) return fallback
+  return decoded
+}
 
 interface Preset {
   id: string
@@ -115,9 +127,19 @@ const ALGORITHM_DESC: Record<'km' | 'hungarian' | 'greedy', string> = {
 }
 
 export function MatchingPlayground() {
-  const [matrix, setMatrix] = useState<CostMatrix>(cloneMatrix(PRESETS[0].matrix))
-  const [maximize, setMaximize] = useState(true)
+  const initial = readInitialState({
+    matrix: cloneMatrix(PRESETS[0].matrix),
+    maximize: true,
+  })
+  const [matrix, setMatrix] = useState<CostMatrix>(initial.matrix)
+  const [maximize, setMaximize] = useState(initial.maximize)
   const [replayOpen, setReplayOpen] = useState(false)
+
+  useEffect(() => {
+    writeHashParams((params) => {
+      params.set('pg', encodeState({ matrix, maximize }))
+    })
+  }, [matrix, maximize])
 
   const rows = matrix.length
   const cols = rows > 0 ? matrix[0].length : 0

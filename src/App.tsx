@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { MatchingPlayground } from './pages/MatchingPlayground'
 import { TrackingScene } from './pages/TrackingScene'
+import { readHashParams, writeHashParams } from './lib/urlState'
 
 type TabKey = 'playground' | 'tracking'
 
@@ -9,8 +10,20 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'tracking', label: '跟踪' },
 ]
 
+function readInitialTab(): TabKey {
+  const fromHash = readHashParams().get('tab')
+  return fromHash === 'tracking' ? 'tracking' : 'playground'
+}
+
 function App() {
-  const [tab, setTab] = useState<TabKey>('playground')
+  const [tab, setTab] = useState<TabKey>(readInitialTab)
+
+  useEffect(() => {
+    writeHashParams((params) => {
+      if (tab === 'playground') params.delete('tab')
+      else params.set('tab', tab)
+    })
+  }, [tab])
 
   return (
     <div className="min-h-screen bg-slate-50">

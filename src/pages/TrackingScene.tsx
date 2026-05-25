@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Card } from '../components/ui/Card'
 import { SegmentedControl } from '../components/ui/SegmentedControl'
 import { Slider } from '../components/ui/Slider'
+import { decodeState, encodeState, readHashParams, writeHashParams } from '../lib/urlState'
 import { TrackingSimulation } from '../simulation/engine'
 import { SCENARIOS, DEFAULT_SCENARIO_ID } from '../simulation/scenarios'
 import {
@@ -15,6 +16,22 @@ import {
 
 const FIRST_SCENARIO =
   SCENARIOS.find((s) => s.id === DEFAULT_SCENARIO_ID) ?? SCENARIOS[0]
+
+interface TrackingState {
+  scenarioId: string
+  config: SimulationConfig
+  compareMode: boolean
+}
+
+function readInitialTracking(): TrackingState {
+  const decoded = decodeState<TrackingState>(readHashParams().get('tk'))
+  if (decoded && decoded.config && decoded.scenarioId) return decoded
+  return {
+    scenarioId: FIRST_SCENARIO.id,
+    config: FIRST_SCENARIO.config,
+    compareMode: false,
+  }
+}
 
 function cloneTargets(targets?: GroundTruthTarget[]): GroundTruthTarget[] | undefined {
   return targets?.map((t) => ({
@@ -33,14 +50,21 @@ function buildSim(
 }
 
 export function TrackingScene() {
-  const [scenarioId, setScenarioId] = useState<string>(FIRST_SCENARIO.id)
-  const [config, setConfig] = useState<SimulationConfig>(FIRST_SCENARIO.config)
-  const [compareMode, setCompareMode] = useState(false)
+  const initial = readInitialTracking()
+  const initialScenario =
+    SCENARIOS.find((s) => s.id === initial.scenarioId) ?? FIRST_SCENARIO
+  const [scenarioId, setScenarioId] = useState<string>(initialScenario.id)
+  const [config, setConfig] = useState<SimulationConfig>(initial.config)
+  const [compareMode, setCompareMode] = useState(initial.compareMode)
 
   const simARef = useRef<TrackingSimulation>(
-    buildSim(FIRST_SCENARIO.config, 'km', FIRST_SCENARIO.buildTargets?.()),
+    buildSim(initial.config, 'km', initialScenario.buildTargets?.()),
   )
-  const simBRef = useRef<TrackingSimulation | null>(null)
+  const simBRef = useRef<TrackingSimulation | null>(
+    initial.compareMode
+      ? buildSim(initial.config, 'greedy', initialScenario.buildTargets?.())
+      : null,
+  )
 
   const [snapshotA, setSnapshotA] = useState<FrameSnapshot | null>(null)
   const [snapshotB, setSnapshotB] = useState<FrameSnapshot | null>(null)
@@ -60,6 +84,12 @@ export function TrackingScene() {
       simBRef.current.updateConfig({ ...config, algorithm: 'greedy' })
     }
   }, [config])
+
+  useEffect(() => {
+    writeHashParams((params) => {
+      params.set('tk', encodeState({ scenarioId, config, compareMode }))
+    })
+  }, [scenarioId, config, compareMode])
 
   const rebuildSims = useCallback(
     (cfg: SimulationConfig, initial?: GroundTruthTarget[], compare = compareMode) => {
