@@ -241,10 +241,7 @@ export function MatchingPlayground() {
           </div>
         </Card>
 
-        <Card
-          title="算法对比"
-          subtitle="三种算法在同一矩阵上的结果"
-        >
+        <Card title="算法对比">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-slate-500 border-b border-slate-200">

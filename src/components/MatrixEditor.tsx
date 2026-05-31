@@ -60,7 +60,7 @@ export function MatrixEditor({
                       }}
                       className={`w-16 px-1 py-1 text-center tabular-nums border rounded transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500/40 ${
                         isHi
-                          ? 'border-brand-500 bg-brand-50 text-brand-700 font-semibold'
+                          ? 'border-violet-500 bg-violet-50 text-violet-700 font-semibold'
                           : 'border-slate-200 bg-white text-slate-700'
                       }`}
                     />

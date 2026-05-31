@@ -12,7 +12,7 @@ interface KMReplayProps {
 
 const PHASE_LABEL: Record<KMPhase, { text: string; tone: string }> = {
   init: { text: '初始化', tone: 'bg-slate-200 text-slate-700' },
-  'augment-init': { text: '新起点', tone: 'bg-sky-100 text-sky-700' },
+  'augment-init': { text: '增广起点', tone: 'bg-sky-100 text-sky-700' },
   'select-y': { text: '加入树', tone: 'bg-amber-100 text-amber-700' },
   'update-labels': { text: '调整顶标', tone: 'bg-rose-100 text-rose-700' },
   'extend-tree': { text: '扩展交错树', tone: 'bg-indigo-100 text-indigo-700' },

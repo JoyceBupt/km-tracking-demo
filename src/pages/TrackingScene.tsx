@@ -298,7 +298,7 @@ export function TrackingScene() {
       </div>
 
       <div className="lg:col-span-4 space-y-6">
-        <Card title="场景预设" subtitle="一键加载典型情形">
+        <Card title="场景预设">
           <div className="grid grid-cols-2 gap-2">
             {SCENARIOS.map((s) => (
               <button
@@ -436,7 +436,7 @@ export function TrackingScene() {
           </div>
         </Card>
 
-        <Card title="渲染">
+        <Card title="播放与显示">
           <div className="space-y-3">
             <Slider
               label="播放速度 (FPS)"
