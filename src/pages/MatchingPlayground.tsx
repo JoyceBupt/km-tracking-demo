@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { greedy, hungarian, km } from '../algorithms'
+import { greedy, km } from '../algorithms'
 import type { CostMatrix } from '../algorithms/types'
 import { BipartiteGraph } from '../components/BipartiteGraph'
 import { KMReplay } from '../components/KMReplay'
@@ -114,16 +114,14 @@ function cloneMatrix(m: CostMatrix): CostMatrix {
   return m.map((row) => row.slice())
 }
 
-const ALGORITHM_LABEL: Record<'km' | 'hungarian' | 'greedy', string> = {
+const ALGORITHM_LABEL: Record<'km' | 'greedy', string> = {
   km: 'Kuhn–Munkres',
-  hungarian: '匈牙利',
   greedy: '贪心',
 }
 
-const ALGORITHM_DESC: Record<'km' | 'hungarian' | 'greedy', string> = {
+const ALGORITHM_DESC: Record<'km' | 'greedy', string> = {
   km: '带权完美匹配 · O(n³)',
-  hungarian: '无权最大匹配',
-  greedy: '按权排序取边',
+  greedy: '按权排序取边 · O(mn log mn)',
 }
 
 export function MatchingPlayground() {
@@ -147,9 +145,7 @@ export function MatchingPlayground() {
   const results = useMemo(() => {
     const kmRes = km(matrix, { maximize })
     const greedyRes = greedy(matrix, { maximize })
-    const adjacency = matrix.map((row) => row.map((v) => (v > 0 ? 1 : 0)))
-    const hungarianRes = hungarian(adjacency)
-    return { km: kmRes, hungarian: hungarianRes, greedy: greedyRes }
+    return { km: kmRes, greedy: greedyRes }
   }, [matrix, maximize])
 
   const optimumWeight = results.km.totalWeight
@@ -254,7 +250,7 @@ export function MatchingPlayground() {
               </tr>
             </thead>
             <tbody>
-              {(['km', 'hungarian', 'greedy'] as const).map((k) => {
+              {(['km', 'greedy'] as const).map((k) => {
                 const r = results[k]
                 let diffText = '—'
                 if (k !== 'km') {

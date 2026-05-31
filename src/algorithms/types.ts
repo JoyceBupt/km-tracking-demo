@@ -1,6 +1,6 @@
 export type CostMatrix = number[][]
 
-export type AlgorithmName = 'km' | 'hungarian' | 'greedy'
+export type AlgorithmName = 'km' | 'greedy'
 
 export interface MatchingOptions {
   maximize?: boolean
